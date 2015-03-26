@@ -11,6 +11,8 @@ from gevent.timeout import Timeout
 import gevent
 import marshal
 import struct
+import traceback
+from gtwisted.utils import log
 
 ASK_SIGNAL = "ASK"#请求结果的信号
 NOTICE_SIGNAL = "NOTICE"#仅做通知的信号，不要求返回值
@@ -112,8 +114,9 @@ class PBProtocl(BaseProtocol):
         method = self.getRemoteMethod(_name)
         try:
             result = self.callRemoteMethod(method, _args, _kw)
-        except Exception,e:
+        except Exception as e:
             result = None
+            log.err(_stuff=e,_why=traceback.format_exc())
             error=str(e)
         else:
             error = None

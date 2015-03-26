@@ -9,6 +9,7 @@ from gevent import Greenlet
 from gevent.socket import create_connection
 from gtwisted.utils import log
 import socket
+import traceback
 
 class BaseProtocol(Greenlet):
     """基础协议，一个协议就是一条单独的微线程在进行处理\n
@@ -54,11 +55,12 @@ class BaseProtocol(Greenlet):
                 data = self.transport.recv(1024)
                 if not data:
                     break
-#                 gevent.spawn(self.dataReceived,data)
-                self.dataReceived(data)
+                import gevent
+                gevent.spawn(self.dataReceived,data)
+#                 self.dataReceived(data)
         except Exception,e:
             if not isinstance(e, socket.error):
-                log.err(system = self.logPrefix())
+                log.err(e,log.err(e,traceback.format_exc()))
             self.connectionLost(reason=e)
         else:
             self.connectionLost(reason=None)
@@ -88,6 +90,7 @@ class ServerFactory:
         """每当有客户端连接产生是会被调用\n
         """
         t = Transport(socket,address,self.sessionno)
+        t.start()
         self.buildProtocol(t)
         p = self.protocol(t,self)
         p.start()
@@ -118,6 +121,7 @@ class ClientFactory:
         address = connector.getHost()
         client = create_connection(address)
         t = Transport(client,address)
+        t.start()
         self.buildProtocol(t)
         self._protocol = self.protocol(t,self)
     

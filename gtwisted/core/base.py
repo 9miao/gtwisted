@@ -6,8 +6,10 @@ Created on 2014年2月21日\n
 '''
 from gevent.server import StreamServer,DatagramServer
 from gevent.pywsgi import WSGIServer
-from gevent import Greenlet
+from gevent import Greenlet,queue
 import gevent
+
+TRANSPORT_END_BUFF = "0x0000"
 
 class DelayCall:
     """延迟调用对象\n
@@ -49,7 +51,7 @@ class Timer(Greenlet):
         return self.delay_call.call()
         
 
-class Transport:
+class Transport(Greenlet):
     
     def __init__(self,skt,address,sessionno=0):
         """基础连接通道\n
@@ -57,6 +59,8 @@ class Transport:
         @param address: (host,port) 一个包含了host和port的元组\n
         @param sessionno: int 由服务端生成的一个唯一的ID编号\n
         """
+        Greenlet.__init__(self)
+        self.inbox = queue.Queue()
         self.skt = skt
         self.address = address
         self.sessionno = sessionno
@@ -70,6 +74,8 @@ class Transport:
         """关闭通道连接\n
         """
         self.skt.close()
+        #销毁greenlet
+        self.kill()
         
     def recv(self,*args):
         """接收消息\n
@@ -79,7 +85,17 @@ class Transport:
     def sendall(self,data):
         """发送消息\n
         """
-        return self.skt.sendall(data)
+        self.inbox.put(data)
+    
+    def _run(self):
+        """启动write协程\n
+        """
+        self.running = True
+        
+        while self.running:
+            message = self.inbox.get()
+            self.skt.sendall(message)
+        
 
 
 class BasePortListener(Greenlet):

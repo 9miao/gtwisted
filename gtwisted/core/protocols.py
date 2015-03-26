@@ -60,7 +60,7 @@ class BaseProtocol(Greenlet):
 #                 self.dataReceived(data)
         except Exception,e:
             if not isinstance(e, socket.error):
-                log.err(e,log.err(e,traceback.format_exc()))
+                log.err(e,traceback.format_exc())
             self.connectionLost(reason=e)
         else:
             self.connectionLost(reason=None)
